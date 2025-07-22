@@ -1,63 +1,71 @@
 const { query } = require('../database');
 const { EMPTY_RESULT_ERROR, SQL_ERROR_CODE, UNIQUE_VIOLATION_ERROR } = require('../errors');
 
+const { PrismaClient, Prisma } = require('@prisma/client');
+const prisma = new PrismaClient();
+
 module.exports.create = function create(code, name, credit) {
-    return query('CALL create_module($1, $2, $3)', [code, name, credit])
-.then(function (result) {
-console.log('Module created successfully');
-})
-.catch(function (error) {
-throw error;
+return prisma.module.create({
+    data: { modCode: code, modName: name, creditUnit: parseInt(credit) }
+}).then(function (module) {
+    return module;
+}).catch(function (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error.code === 'P2002') {
+    console.log('There is a unique constraint violation')
+    }
+}
+    throw error;
 });
 };
 
 module.exports.retrieveByCode = function retrieveByCode(code) {
-    const sql = `SELECT * FROM module WHERE mod_code = $1`;
-    return query(sql, [code]).then(function (result) {
-        const rows = result.rows;
-
-        if (rows.length === 0) {
-            // Note: result.rowCount returns the number of rows processed instead of returned
-            // Read more: https://node-postgres.com/apis/result#resultrowcount-int--null
-            throw new EMPTY_RESULT_ERROR(`Module ${code} not found!`);
-        }
-
-        return rows[0];
-    });
-};
-
-module.exports.deleteByCode = function deleteByCode(code) {
-    // Note:
-    // If using raw sql: Can use result.rowCount to check the number of rows affected
-    // But if using function/stored procedure, result.rowCount will always return null
-    return query('CALL delete_module($1)', [code])
-.then(function (result) {
-console.log('Module deleted successfully');
-})
-.catch(function (error) {
-throw error;
+    return prisma.module.findUnique({
+    where: { modCode: code }
+}).then(function (module) {
+    return module;
+}).catch(function (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error.code === 'P2005') {
+    console.log('There is a unique constraint violation')
+    }
+}
+    throw error;
 });
 };
 
-module.exports.updateByCode = function updateByCode(code, credit) {
-    // Note:
-    // If using raw sql: Can use result.rowCount to check the number of rows affected
-    // But if using function/stored procedure, result.rowCount will always return null
+module.exports.deleteByCode = function deleteByCode(code) {
+return prisma.module.delete({
+    where: { modCode: code }
+}).then(function (module) {
 
-    return query('CALL update_module($1, $2)', [code, credit_unit])
-.then(function (result) {
-console.log('Module deleted successfully');
+}).catch(function (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error.code === 'P2005') {
+    console.log('There is a unique constraint violation')
+    }
+}
+    throw error;
 })
-.catch(function (error) {
-throw error;
+};
+
+module.exports.updateByCode = function updateByCode(code, credit) {
+return prisma.module.update({
+    where: { modCode: code },
+    data: { creditUnit: parseInt(credit) }
+}).then(function (module) {
+}).catch(function (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error.code === 'P2005') {
+    console.log('There is a unique constraint violation')
+    }
+}
+    throw error;
 });
 };
 
 module.exports.retrieveAll = function retrieveAll() {
-    const sql = `SELECT * FROM module`;
-    return query(sql).then(function (result) {
-        return result.rows;
-    });
+    return prisma.module.findMany();
 };
 
 module.exports.retrieveBulk = function retrieveBulk(codes) {
